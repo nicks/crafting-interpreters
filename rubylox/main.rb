@@ -3,7 +3,7 @@
 require_relative "./error.rb"
 require_relative "./Scanner.rb"
 require_relative "./Parser.rb"
-require_relative "./AstPrinter.rb"
+require_relative "./Interpreter.rb"
 
 # Run from a string.
 def run(source)
@@ -11,17 +11,18 @@ def run(source)
   tokens = scanner.scanTokens()
 
   if Err.had_error
-    exit 65
+    return
   end
 
   parser = Parser.new(tokens)
   expr = parser.parse()
   
   if Err.had_error
-    exit 65
+    return
   end
-  
-  puts AstPrinter.new().print(expr)
+
+  interpreter = Interpreter.new()
+  interpreter.interpret(expr)
 end
 
 # Run from a file.
@@ -30,6 +31,13 @@ def runFile(filename)
     raise "File does not exist: #{filename}"
   end
   run(File.read(filename))
+
+  if Err.had_error
+    exit(65)
+  end
+  if Err.had_runtime_error
+    exit(70)
+  end
 end
 
 # Run from stdin.
