@@ -43,15 +43,22 @@ class Interpreter
   include ExprVisitor
   include StmtVisitor
 
-  def initialize
+  def initialize(repl_mode=false)
     @environment = Environment.new
+    @repl_mode = repl_mode
   end
   
   def interpret(stmts)
     begin
-      stmts.each do |stmt|
+      *list, last = stmts
+      list.each do |stmt|
         execute(stmt)
       end
+      if @repl_mode and last.is_a?(ExprStmt)
+        puts stringify(evaluate(last.expression))
+      elsif last
+        execute(last)
+      end        
     rescue RuntimeError => e
       Err.runtime_error(e)
     end
