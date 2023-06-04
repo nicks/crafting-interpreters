@@ -13,13 +13,45 @@ class RuntimeError < StandardError
   end
 end
 
+class Environment
+  def initialize(enclosing=nil)
+    @values = {}
+    @enclosing = enclosing
+  end
+
+  def define(name, value)
+    @values[name.lexeme] = value
+  end
+
+  def get(name)
+    return @values[name.lexeme] if @values.key?(name.lexeme)
+    return @enclosing.get(name) if @enclosing
+    raise RuntimeError.new(name, "Undefined variable '#{name.lexeme}'.")
+  end
+
+  def assign(name, value)
+    if @values.key?(name.lexeme)
+      @values[name.lexeme] = value
+      return
+    end
+    return @enclosing.assign(name, value) if @enclosing
+    raise RuntimeError.new(name, "Undefined variable '#{name.lexeme}'.")
+  end
+end
+
 class Interpreter
-  include Visitor
+  include ExprVisitor
+  include StmtVisitor
+
+  def initialize
+    @environment = Environment.new
+  end
   
-  def interpret(expr)
+  def interpret(stmts)
     begin
-      value = evaluate(expr)
-      puts stringify(value)
+      stmts.each do |stmt|
+        execute(stmt)
+      end
     rescue RuntimeError => e
       Err.runtime_error(e)
     end
@@ -34,6 +66,39 @@ class Interpreter
       return text
     end
     object.to_s
+  end
+
+  def visitVariable(expr)
+    @environment.get(expr.name)
+  end
+
+  def visitVarStmt(stmt)
+    value = nil
+    value = evaluate(stmt.initializer) if stmt.initializer
+    @environment.define(stmt.name, value)
+    nil
+  end
+
+  def visitAssign(expr)
+    value = evaluate(expr.value)
+    @environment.assign(expr.name, value)
+    value
+  end
+
+  def visitBlockStmt(stmt)
+    executeBlock(stmt.statements, Environment.new(@environment))
+    nil
+  end
+  
+  def visitExprStmt(stmt)
+    evaluate(stmt.expression)
+    nil
+  end
+
+  def visitPrintStmt(stmt)
+    value = evaluate(stmt.expression)
+    puts stringify(value)
+    nil
   end
 
   def visitLiteral(expr)
@@ -110,6 +175,23 @@ class Interpreter
 
   def evaluate(expr)
     expr.accept(self)
+  end
+
+  def execute(stmt)
+    stmt.accept(self)
+    nil
+  end
+
+  def executeBlock(stmts, environment)
+    previous = @environment
+    begin
+      @environment = environment
+      stmts.each do |stmt|
+        execute(stmt)
+      end
+    ensure
+      @environment = previous
+    end
   end
 
   def checkNumberOperands(operator, left, right)

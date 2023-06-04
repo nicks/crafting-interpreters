@@ -4,6 +4,11 @@ module Err
   @@had_error = false
   @@had_runtime_error = false
 
+  def Err.reset()
+    @@had_error = false
+    @@had_runtime_error = false
+  end
+
   def Err.report(line, where, message)
     STDERR.puts "[line #{line}] Error #{where}: #{message}"
     @@had_error = true
@@ -15,10 +20,10 @@ module Err
   end
 
   def Err.parse_error(token, message)
-    if token.type == :EOF
-      Err::report(token.line, " at end", message)
+    if token.type == :eof
+      Err::report(token.line, "at end", message)
     else
-      Err::report(token.line, " at '#{token.lexeme}'", message)
+      Err::report(token.line, "at '#{token.lexeme}'", message)
     end
   end
 

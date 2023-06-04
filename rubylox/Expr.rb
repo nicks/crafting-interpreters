@@ -7,7 +7,7 @@ class Expr
   end
 end
 
-module Visitor
+module ExprVisitor
   def visitBinary(expr)
     raise NotImplementedError
   end
@@ -21,6 +21,14 @@ module Visitor
   end
 
   def visitUnary(expr)
+    raise NotImplementedError
+  end
+
+  def visitVariable(expr)
+    raise NotImplementedError
+  end
+
+  def visitAssign(expr)
     raise NotImplementedError
   end
 
@@ -74,6 +82,31 @@ class Unary < Expr
 
   def accept(visitor)
     visitor.visitUnary(self)
+  end
+
+end
+
+class Variable < Expr
+  attr_reader :name
+  def initialize(name)
+    @name = name
+  end
+
+  def accept(visitor)
+    visitor.visitVariable(self)
+  end
+
+end
+
+class Assign < Expr
+  attr_reader :name, :value
+  def initialize(name, value)
+    @name = name
+    @value = value
+  end
+
+  def accept(visitor)
+    visitor.visitAssign(self)
   end
 
 end
