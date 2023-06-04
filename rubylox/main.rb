@@ -15,14 +15,14 @@ def run(source)
   end
 
   parser = Parser.new(tokens)
-  expr = parser.parse()
+  stmts = parser.parse()
   
   if Err.had_error
     return
   end
 
   interpreter = Interpreter.new()
-  interpreter.interpret(expr)
+  interpreter.interpret(stmts)
 end
 
 # Run from a file.
@@ -45,6 +45,7 @@ def runPrompt()
   loop do
     print "> "
     begin
+      Err.reset()
       run(ARGF.readline)
     rescue EOFError
       break

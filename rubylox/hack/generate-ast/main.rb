@@ -2,7 +2,7 @@
 # A helper script to generate the AST classes.
 
 def define_visitor(f, base_name, types)
-  f.puts "module Visitor"
+  f.puts "module #{base_name}Visitor"
   types.each do |type|
     type_name = type.split(":")[0].strip
     f.puts "  def visit#{type_name}(#{base_name.downcase})"
@@ -58,7 +58,7 @@ end
 
 def main
   if ARGV.length != 1
-    puts "Usage: generate-ast [script]"
+    puts "Usage: generate-ast [output directory]"
     exit
   end
 
@@ -67,7 +67,15 @@ def main
                "Binary   : Expr left, Token operator, Expr right",
                "Grouping : Expr expression",
                "Literal  : Object value",
-               "Unary    : Token operator, Expr right"
+               "Unary    : Token operator, Expr right",
+               "Variable : Token name",
+               "Assign   : Token name, Expr value"
+             ])
+  define_ast(output_dir, "Stmt", [
+               "ExprStmt  : Expr expression",
+               "PrintStmt : Expr expression",
+               "VarStmt   : Token name, Expr initializer",
+               "BlockStmt : Array<Stmt> statements"
              ])
   
 end

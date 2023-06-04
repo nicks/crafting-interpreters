@@ -1,4 +1,5 @@
 require_relative './Expr.rb'
+require_relative './Stmt.rb'
 require_relative './Token.rb'
 require_relative './TokenType.rb'
 require_relative './error.rb'
@@ -13,15 +14,74 @@ class Parser
   end
 
   def parse()
+    statements = []
+    while !isAtEnd()
+      statements << declaration()
+    end
+    statements
+  end
+
+  def declaration()
     begin
-      expression()
+      return varDeclaration() if match(TokenType::VAR)
+      statement()
     rescue ParseError => e
-      return nil
+      synchronize()
+      nil
     end
   end
 
+  def varDeclaration()
+    name = consume(TokenType::IDENTIFIER, "Expect variable name.")
+    initializer = nil
+    initializer = expression() if match(TokenType::EQUAL)
+    consume(TokenType::SEMICOLON, "Expect ';' after variable declaration.")
+    VarStmt.new(name, initializer)
+  end
+
+  def statement()
+    return printStatement() if match(TokenType::PRINT)
+    return block() if match(TokenType::LEFT_BRACE)
+    expressionStatement()
+  end
+
+  def block()
+    statements = []
+    while !check(TokenType::RIGHT_BRACE) && !isAtEnd()
+      statements << declaration()
+    end
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after block.")
+    BlockStmt.new(statements)
+  end
+
+  def printStatement()
+    value = expression()
+    consume(TokenType::SEMICOLON, "Expect ';' after value.")
+    PrintStmt.new(value)
+  end
+
+  def expressionStatement()
+    expr = expression()
+    consume(TokenType::SEMICOLON, "Expect ';' after expression.")
+    ExprStmt.new(expr)
+  end
+
   def expression()
-    equality
+    assignment
+  end
+
+  def assignment
+    expr = equality()
+    if match(TokenType::EQUAL)
+      equals = previous()
+      value = assignment()
+      if expr.is_a?(Variable)
+        name = expr.name
+        return Assign.new(name, value)
+      end
+      error(equals, "Invalid assignment target.")
+    end
+    expr
   end
 
   def equality()
@@ -80,6 +140,7 @@ class Parser
     return Literal.new(true) if match(TokenType::TRUE)
     return Literal.new(nil) if match(TokenType::NIL)
     return Literal.new(previous().literal) if match(TokenType::NUMBER, TokenType::STRING)
+    return Variable.new(previous()) if match(TokenType::IDENTIFIER)
     if match(TokenType::LEFT_PAREN)
       expr = expression()
       consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.")
@@ -89,8 +150,8 @@ class Parser
   end
 
   def consume(type, message)
-    advance if check(type)
-    throw error(peek(), message)
+    return advance if check(type)
+    error(peek(), message)
   end
 
   def error(token, message)

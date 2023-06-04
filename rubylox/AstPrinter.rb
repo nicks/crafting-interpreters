@@ -7,7 +7,7 @@ require_relative './TokenType.rb'
 require 'stringio'
 
 class AstPrinter
-  include Visitor
+  include ExprVisitor
   
   def print(expr)
     expr.accept(self)
