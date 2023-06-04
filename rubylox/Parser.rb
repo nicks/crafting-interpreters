@@ -8,23 +8,29 @@ class ParseError < StandardError
 end
 
 class Parser
-  def initialize(tokens)
+  def initialize(tokens, repl_mode=false)
     @tokens = tokens
     @current = 0
+    @repl_mode = true
   end
 
+  # program -> declaration* EOF
+  # repl -> (declaration* | expression) EOF
   def parse()
     statements = []
+    if !isAtEnd()
+      statements << declaration(repl_expression=@repl_mode)
+    end
     while !isAtEnd()
       statements << declaration()
     end
     statements
   end
-
-  def declaration()
+  
+  def declaration(repl_expression=false)
     begin
       return varDeclaration() if match(TokenType::VAR)
-      statement()
+      statement(repl_expression)
     rescue ParseError => e
       synchronize()
       nil
@@ -39,10 +45,10 @@ class Parser
     VarStmt.new(name, initializer)
   end
 
-  def statement()
+  def statement(repl_expression=false)
     return printStatement() if match(TokenType::PRINT)
     return block() if match(TokenType::LEFT_BRACE)
-    expressionStatement()
+    expressionStatement(repl_expression)
   end
 
   def block()
@@ -60,8 +66,13 @@ class Parser
     PrintStmt.new(value)
   end
 
-  def expressionStatement()
+  def expressionStatement(repl_expression=false)
     expr = expression()
+
+    # If we're in REPL mode, it's ok to have
+    # an expression without ma semicolon.
+    return ExprStmt.new(expr) if repl_expression and isAtEnd()
+      
     consume(TokenType::SEMICOLON, "Expect ';' after expression.")
     ExprStmt.new(expr)
   end

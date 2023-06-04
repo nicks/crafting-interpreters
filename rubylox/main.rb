@@ -6,7 +6,7 @@ require_relative "./Parser.rb"
 require_relative "./Interpreter.rb"
 
 # Run from a string.
-def run(source)
+def run(source, repl_mode=false)
   scanner = Scanner.new(source)
   tokens = scanner.scanTokens()
 
@@ -14,14 +14,14 @@ def run(source)
     return
   end
 
-  parser = Parser.new(tokens)
+  parser = Parser.new(tokens, repl_mode)
   stmts = parser.parse()
   
   if Err.had_error
     return
   end
 
-  interpreter = Interpreter.new()
+  interpreter = Interpreter.new(repl_mode)
   interpreter.interpret(stmts)
 end
 
@@ -46,7 +46,7 @@ def runPrompt()
     print "> "
     begin
       Err.reset()
-      run(ARGF.readline)
+      run(ARGF.readline, repl_mode=true)
     rescue EOFError
       break
     end
