@@ -1,7 +1,9 @@
 # Desc: Main entry point for rubylox.
 
-require "./error.rb"
-require "./Scanner.rb"
+require_relative "./error.rb"
+require_relative "./Scanner.rb"
+require_relative "./Parser.rb"
+require_relative "./AstPrinter.rb"
 
 # Run from a string.
 def run(source)
@@ -11,11 +13,15 @@ def run(source)
   if Err.had_error
     exit 65
   end
+
+  parser = Parser.new(tokens)
+  expr = parser.parse()
   
-  # For now, just print the tokens.
-  tokens.each do |token|
-    puts token
+  if Err.had_error
+    exit 65
   end
+  
+  puts AstPrinter.new().print(expr)
 end
 
 # Run from a file.
