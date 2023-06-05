@@ -12,6 +12,10 @@ module StmtVisitor
     raise NotImplementedError
   end
 
+  def visitIfStmt(stmt)
+    raise NotImplementedError
+  end
+
   def visitPrintStmt(stmt)
     raise NotImplementedError
   end
@@ -21,6 +25,10 @@ module StmtVisitor
   end
 
   def visitBlockStmt(stmt)
+    raise NotImplementedError
+  end
+
+  def visitWhileStmt(stmt)
     raise NotImplementedError
   end
 
@@ -35,6 +43,20 @@ class ExprStmt < Stmt
 
   def accept(visitor)
     visitor.visitExprStmt(self)
+  end
+
+end
+
+class IfStmt < Stmt
+  attr_reader :condition, :then_branch, :else_branch
+  def initialize(condition, then_branch, else_branch)
+    @condition = condition
+    @then_branch = then_branch
+    @else_branch = else_branch
+  end
+
+  def accept(visitor)
+    visitor.visitIfStmt(self)
   end
 
 end
@@ -72,6 +94,19 @@ class BlockStmt < Stmt
 
   def accept(visitor)
     visitor.visitBlockStmt(self)
+  end
+
+end
+
+class WhileStmt < Stmt
+  attr_reader :condition, :body
+  def initialize(condition, body)
+    @condition = condition
+    @body = body
+  end
+
+  def accept(visitor)
+    visitor.visitWhileStmt(self)
   end
 
 end

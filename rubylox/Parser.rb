@@ -46,9 +46,63 @@ class Parser
   end
 
   def statement(repl_expression=false)
+    return forStatement() if match(TokenType::FOR)
+    return ifStatement() if match(TokenType::IF)
+    return whileStatement() if match(TokenType::WHILE)
     return printStatement() if match(TokenType::PRINT)
     return block() if match(TokenType::LEFT_BRACE)
     expressionStatement(repl_expression)
+  end
+
+  def forStatement()
+    consume(TokenType::LEFT_PAREN, "Expect '(' after 'for'.")
+    initializer = nil
+    if match(TokenType::SEMICOLON)
+      initializer = expressionStatement()
+    elsif match(TokenType::VAR)
+      initializer = varDeclaration()
+    else
+      initializer = expressionStatement()
+    end
+    condition = nil
+    if !check(TokenType::SEMICOLON)
+      condition = expression()
+    end
+    consume(TokenType::SEMICOLON, "Expect ';' after loop condition.")
+    increment = nil
+    increment = expression() if !check(TokenType::RIGHT_PAREN)
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after for clauses.")
+    body = statement()
+    if not increment.nil?
+      body = BlockStmt.new([body, ExprStmt.new(increment)])
+    end
+
+    if condition.nil?
+      condition = Literal.new(true)
+    end
+    body = WhileStmt.new(condition, body)
+    if not initializer.nil?
+      body = BlockStmt.new([initializer, body])
+    end
+    body
+  end
+    
+
+  def whileStatement()
+    consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.")
+    condition = expression()
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after condition.")
+    body = statement()
+    WhileStmt.new(condition, body)
+  end
+
+  def ifStatement()
+    consume(TokenType::LEFT_PAREN, "Expect '(' after 'if'.")
+    condition = expression()
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after if condition.")
+    then_branch = statement()
+    else_branch = statement() if match(TokenType::ELSE)
+    IfStmt.new(condition, then_branch, else_branch)
   end
 
   def block()
@@ -82,7 +136,7 @@ class Parser
   end
 
   def assignment
-    expr = equality()
+    expr = orExpr()
     if match(TokenType::EQUAL)
       equals = previous()
       value = assignment()
@@ -91,6 +145,26 @@ class Parser
         return Assign.new(name, value)
       end
       error(equals, "Invalid assignment target.")
+    end
+    expr
+  end
+
+  def orExpr()
+    expr = andExpr()
+    while match(TokenType::OR)
+      operator = previous()
+      right = andExpr()
+      expr = Logical.new(expr, operator, right)
+    end
+    expr
+  end
+
+  def andExpr()
+    expr = equality()
+    while match(TokenType::AND)
+      operator = previous()
+      right = equality()
+      expr = Logical.new(expr, operator, right)
     end
     expr
   end

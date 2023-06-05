@@ -86,6 +86,32 @@ class Interpreter
     nil
   end
 
+  def visitIfStmt(stmt)
+    if isTruthy(evaluate(stmt.condition))
+      execute(stmt.then_branch)
+    elsif stmt.else_branch
+      execute(stmt.else_branch)
+    end
+    nil
+  end
+
+  def visitWhileStmt(stmt)
+    while isTruthy(evaluate(stmt.condition))
+      execute(stmt.body)
+    end
+    nil
+  end
+
+  def visitLogical(expr)
+    left = evaluate(expr.left)
+    if expr.operator.type == TokenType::OR
+      return left if isTruthy(left)
+    else
+      return left unless isTruthy(left)
+    end
+    evaluate(expr.right)
+  end
+
   def visitAssign(expr)
     value = evaluate(expr.value)
     @environment.assign(expr.name, value)

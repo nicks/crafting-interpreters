@@ -32,6 +32,10 @@ module ExprVisitor
     raise NotImplementedError
   end
 
+  def visitLogical(expr)
+    raise NotImplementedError
+  end
+
 end
 
 
@@ -107,6 +111,20 @@ class Assign < Expr
 
   def accept(visitor)
     visitor.visitAssign(self)
+  end
+
+end
+
+class Logical < Expr
+  attr_reader :left, :operator, :right
+  def initialize(left, operator, right)
+    @left = left
+    @operator = operator
+    @right = right
+  end
+
+  def accept(visitor)
+    visitor.visitLogical(self)
   end
 
 end
