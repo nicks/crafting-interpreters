@@ -70,15 +70,18 @@ def main
                "Unary    : Token operator, Expr right",
                "Variable : Token name",
                "Assign   : Token name, Expr value",
-               "Logical  : Expr left, Token operator, Expr right"
+               "Logical  : Expr left, Token operator, Expr right",
+               "Call     : Expr callee, Token paren, Array<Expr> arguments"
              ])
   define_ast(output_dir, "Stmt", [
                "ExprStmt  : Expr expression",
                "IfStmt    : Expr condition, Stmt then_branch, Stmt else_branch",
                "PrintStmt : Expr expression",
+               "ReturnStmt: Token keyword, Expr value",
                "VarStmt   : Token name, Expr initializer",
                "BlockStmt : Array<Stmt> statements",
-               "WhileStmt : Expr condition, Stmt body"
+               "WhileStmt : Expr condition, Stmt body",
+               "FunctionStmt : Token name, Array<Token> params, Array<Stmt> body"
              ])
   
 end

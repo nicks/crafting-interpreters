@@ -36,6 +36,10 @@ module ExprVisitor
     raise NotImplementedError
   end
 
+  def visitCall(expr)
+    raise NotImplementedError
+  end
+
 end
 
 
@@ -125,6 +129,20 @@ class Logical < Expr
 
   def accept(visitor)
     visitor.visitLogical(self)
+  end
+
+end
+
+class Call < Expr
+  attr_reader :callee, :paren, :arguments
+  def initialize(callee, paren, arguments)
+    @callee = callee
+    @paren = paren
+    @arguments = arguments
+  end
+
+  def accept(visitor)
+    visitor.visitCall(self)
   end
 
 end
