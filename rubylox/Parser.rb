@@ -29,12 +29,32 @@ class Parser
   
   def declaration(repl_expression=false)
     begin
+      return function("function") if match(TokenType::FUN)
       return varDeclaration() if match(TokenType::VAR)
       statement(repl_expression)
     rescue ParseError => e
       synchronize()
       nil
     end
+  end
+
+  def function(kind)
+    name = consume(TokenType::IDENTIFIER, "Expect #{kind} name.")
+    consume(TokenType::LEFT_PAREN, "Expect '(' after #{kind} name.")
+    parameters = []
+    if !check(TokenType::RIGHT_PAREN)
+      begin
+        if parameters.length >= 255
+          error(peek(), "Can't have more than 255 parameters.")
+        end
+        parameters << consume(TokenType::IDENTIFIER, "Expect parameter name.")
+      end while match(TokenType::COMMA)
+    end
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after parameters.")
+    consume(TokenType::LEFT_BRACE, "Expect '{' before #{kind} body.")
+    body = block()
+    
+    FunctionStmt.new(name, parameters, body)
   end
 
   def varDeclaration()
@@ -49,9 +69,18 @@ class Parser
     return forStatement() if match(TokenType::FOR)
     return ifStatement() if match(TokenType::IF)
     return whileStatement() if match(TokenType::WHILE)
+    return returnStatement() if match(TokenType::RETURN)
     return printStatement() if match(TokenType::PRINT)
     return block() if match(TokenType::LEFT_BRACE)
     expressionStatement(repl_expression)
+  end
+
+  def returnStatement()
+    keyword = previous()
+    value = nil
+    value = expression() if !check(TokenType::SEMICOLON)
+    consume(TokenType::SEMICOLON, "Expect ';' after return value.")
+    ReturnStmt.new(keyword, value)
   end
 
   def forStatement()
@@ -217,7 +246,33 @@ class Parser
       right = unary()
       return Unary.new(operator, right)
     end
-    primary()
+    call()
+  end
+
+  def call()
+    expr = primary()
+    while true
+      if match(TokenType::LEFT_PAREN)
+        expr = finishCall(expr)
+      else
+        break
+      end
+    end
+    expr
+  end
+
+  def finishCall(callee)
+    arguments = []
+    if !check(TokenType::RIGHT_PAREN)
+      begin
+        if arguments.length >= 255
+          error(peek(), "Can't have more than 255 arguments.")
+        end
+        arguments << expression()
+      end while match(TokenType::COMMA)
+    end
+    paren = consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments.")
+    Call.new(callee, paren, arguments)
   end
 
   def primary()

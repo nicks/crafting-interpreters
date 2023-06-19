@@ -20,6 +20,10 @@ module StmtVisitor
     raise NotImplementedError
   end
 
+  def visitReturnStmt(stmt)
+    raise NotImplementedError
+  end
+
   def visitVarStmt(stmt)
     raise NotImplementedError
   end
@@ -29,6 +33,10 @@ module StmtVisitor
   end
 
   def visitWhileStmt(stmt)
+    raise NotImplementedError
+  end
+
+  def visitFunctionStmt(stmt)
     raise NotImplementedError
   end
 
@@ -73,6 +81,19 @@ class PrintStmt < Stmt
 
 end
 
+class ReturnStmt < Stmt
+  attr_reader :keyword, :value
+  def initialize(keyword, value)
+    @keyword = keyword
+    @value = value
+  end
+
+  def accept(visitor)
+    visitor.visitReturnStmt(self)
+  end
+
+end
+
 class VarStmt < Stmt
   attr_reader :name, :initializer
   def initialize(name, initializer)
@@ -107,6 +128,20 @@ class WhileStmt < Stmt
 
   def accept(visitor)
     visitor.visitWhileStmt(self)
+  end
+
+end
+
+class FunctionStmt < Stmt
+  attr_reader :name, :params, :body
+  def initialize(name, params, body)
+    @name = name
+    @params = params
+    @body = body
+  end
+
+  def accept(visitor)
+    visitor.visitFunctionStmt(self)
   end
 
 end

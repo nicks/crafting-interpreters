@@ -13,6 +13,13 @@ class RuntimeError < StandardError
   end
 end
 
+class Return < StandardError
+  attr_reader :value
+  def initialize(value)
+    @value = value
+  end
+end
+
 class Environment
   def initialize(enclosing=nil)
     @values = {}
@@ -21,6 +28,10 @@ class Environment
 
   def define(name, value)
     @values[name.lexeme] = value
+  end
+  
+  def define_native(name, value)
+    @values[name] = value
   end
 
   def get(name)
@@ -39,12 +50,74 @@ class Environment
   end
 end
 
+class LoxCallable
+  def arity
+    raise NotImplementedError
+  end
+
+  def call
+    raise NotImplementedError
+  end
+end
+
+class NativeCallable < LoxCallable
+  attr_reader :arity
+  
+  def initialize(arity=0, &block)
+    @arity = arity
+    @block = block
+  end
+  
+  def call(interpreter, arguments)
+    @block.call(interpreter, arguments)
+  end
+
+  def to_s
+    "<native fn>"
+  end
+end
+
+class LoxFunction < LoxCallable
+  def initialize(declaration, closure)
+    @declaration = declaration
+    @closure = closure
+  end
+
+  def call(interpreter, arguments)
+    environment = Environment.new(@closure)
+    @declaration.params.each_with_index do |param, i|
+      environment.define(param, arguments[i])
+    end
+    begin
+      interpreter.executeBlock(@declaration.body.statements, environment)
+    rescue Return => returnValue
+      return returnValue.value
+    end
+    nil
+  end
+
+  def arity
+    @declaration.params.length
+  end
+
+  def to_s
+    "<fn #{@declaration.name.lexeme}>"
+  end
+end
+
+$clock = NativeCallable.new(0) { |interpreter, arguments| Time.now.to_f }
+
 class Interpreter
   include ExprVisitor
   include StmtVisitor
 
+  attr_reader :globals
+
   def initialize(repl_mode=false)
-    @environment = Environment.new
+    @globals = Environment.new
+    @globals.define_native("clock", $clock)
+    
+    @environment = @globals
     @repl_mode = repl_mode
   end
   
@@ -95,6 +168,18 @@ class Interpreter
     nil
   end
 
+  def visitFunctionStmt(stmt)
+    function = LoxFunction.new(stmt, @environment)
+    @environment.define(stmt.name, function)
+    nil
+  end
+
+  def visitReturnStmt(stmt)
+    value = nil
+    value = evaluate(stmt.value) if not stmt.value.nil?
+    raise Return.new(value)
+  end
+  
   def visitWhileStmt(stmt)
     while isTruthy(evaluate(stmt.condition))
       execute(stmt.body)
@@ -102,6 +187,23 @@ class Interpreter
     nil
   end
 
+  def visitCall(expr)
+    callee = evaluate(expr.callee)
+    arguments = []
+    expr.arguments.each do |arg|
+      arguments << evaluate(arg)
+    end
+    if !callee.is_a?(LoxCallable)
+      raise RuntimeError.new(expr.paren, "Can only call functions and classes.")
+    end
+    if arguments.length != callee.arity()
+      raise RuntimeError.new(
+              expr.paren,
+              "Expected #{callee.arity()} arguments but got #{arguments.length}.")
+    end
+    callee.call(self, arguments)
+  end
+  
   def visitLogical(expr)
     left = evaluate(expr.left)
     if expr.operator.type == TokenType::OR
