@@ -1,10 +1,13 @@
-var a = "global";
-{
-  fun showA() {
-    print a;
+class Bagel {
+  init(t) {
+    this.t = t;
   }
 
-  showA();
-  var a = "block";
-  showA();
+  eat() {
+    print "munch munch " + this.t;
+  }
 }
+var x = "onion";
+var bagel = Bagel(x);
+var y = bagel.eat;
+y();

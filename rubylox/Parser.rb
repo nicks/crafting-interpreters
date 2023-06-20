@@ -30,6 +30,7 @@ class Parser
   def declaration(repl_expression=false)
     begin
       return function("function") if match(TokenType::FUN)
+      return classDeclaration() if match(TokenType::CLASS)
       return varDeclaration() if match(TokenType::VAR)
       statement(repl_expression)
     rescue ParseError => e
@@ -55,6 +56,17 @@ class Parser
     body = block()
     
     FunctionStmt.new(name, parameters, body)
+  end
+
+  def classDeclaration()
+    name = consume(TokenType::IDENTIFIER, "Expect class name.")
+    consume(TokenType::LEFT_BRACE, "Expect '{' before class body.")
+    methods = []
+    while !check(TokenType::RIGHT_BRACE) && !isAtEnd()
+      methods << function("method")
+    end
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after class body.")
+    ClassStmt.new(name, methods)
   end
 
   def varDeclaration()
@@ -172,6 +184,9 @@ class Parser
       if expr.is_a?(Variable)
         name = expr.name
         return Assign.new(name, value)
+      elsif expr.is_a?(Get)
+        get = expr
+        return SetExpr.new(get.object, get.name, value)
       end
       error(equals, "Invalid assignment target.")
     end
@@ -254,6 +269,9 @@ class Parser
     while true
       if match(TokenType::LEFT_PAREN)
         expr = finishCall(expr)
+      elsif match(TokenType::DOT)
+        name = consume(TokenType::IDENTIFIER, "Expect property name after '.'.")
+        expr = Get.new(expr, name)
       else
         break
       end
@@ -279,6 +297,7 @@ class Parser
     return Literal.new(false) if match(TokenType::FALSE)
     return Literal.new(true) if match(TokenType::TRUE)
     return Literal.new(nil) if match(TokenType::NIL)
+    return This.new(previous()) if match(TokenType::THIS)
     return Literal.new(previous().literal) if match(TokenType::NUMBER, TokenType::STRING)
     return Variable.new(previous()) if match(TokenType::IDENTIFIER)
     if match(TokenType::LEFT_PAREN)

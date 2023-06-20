@@ -30,7 +30,7 @@ class Environment
   end
 
   def define(name, value)
-    @values[name.lexeme] = value
+    @values[name] = value
   end
   
   def define_native(name, value)
@@ -97,21 +97,26 @@ class NativeCallable < LoxCallable
 end
 
 class LoxFunction < LoxCallable
-  def initialize(declaration, closure)
+  def initialize(declaration, closure, is_initializer=false)
     @declaration = declaration
     @closure = closure
+    @is_initializer = is_initializer
   end
 
   def call(interpreter, arguments)
     environment = Environment.new(@closure)
     @declaration.params.each_with_index do |param, i|
-      environment.define(param, arguments[i])
+      environment.define(param.lexeme, arguments[i])
     end
     begin
       interpreter.executeBlock(@declaration.body, environment)
     rescue Return => returnValue
+      if @is_initializer
+        return @closure.getAt(0, "this")
+      end
       return returnValue.value
     end
+    return @closure.getAt(0, "this") if @is_initializer
     nil
   end
 
@@ -119,8 +124,67 @@ class LoxFunction < LoxCallable
     @declaration.params.length
   end
 
+  def bind(instance)
+    environment = Environment.new(@closure)
+    environment.define("this", instance)
+    LoxFunction.new(@declaration, environment, @is_initializer)
+  end
+
   def to_s
     "<fn #{@declaration.name.lexeme}>"
+  end
+end
+
+class LoxClass < LoxCallable
+  def initialize(name, methods)
+    @name = name
+    @methods = methods
+  end
+
+  def call(interpreter, arguments)
+    instance = LoxInstance.new(self)
+    initializer = findMethod("init")
+    initializer.bind(instance).call(interpreter, arguments) if initializer
+    return instance
+  end
+
+  def arity()
+    initializer = findMethod("init")
+    return initializer.arity if initializer
+    0
+  end
+
+  def findMethod(name)
+    return @methods[name] if @methods.key?(name)
+    nil
+  end
+
+  def to_s()
+    @name
+  end
+end
+
+class LoxInstance
+  def initialize(klass)
+    @klass = klass
+    @fields = {}
+  end
+
+  def get(name)
+    if @fields.key?(name.lexeme)
+      return @fields[name.lexeme]
+    end
+    method = @klass.findMethod(name.lexeme)
+    return method.bind(self) if method
+    raise RuntimeError.new(name, "Undefined property '#{name.lexeme}'.")
+  end
+
+  def set(name, value)
+    @fields[name.lexeme] = value
+  end
+
+  def to_s()
+    "#{@klass} instance"
   end
 end
 
@@ -188,7 +252,7 @@ class Interpreter
   def visitVarStmt(stmt)
     value = nil
     value = evaluate(stmt.initializer) if stmt.initializer
-    @environment.define(stmt.name, value)
+    @environment.define(stmt.name.lexeme, value)
     nil
   end
 
@@ -203,7 +267,7 @@ class Interpreter
 
   def visitFunctionStmt(stmt)
     function = LoxFunction.new(stmt, @environment)
-    @environment.define(stmt.name, function)
+    @environment.define(stmt.name.lexeme, function)
     nil
   end
 
@@ -236,6 +300,28 @@ class Interpreter
     end
     callee.call(self, arguments)
   end
+
+  def visitGet(expr)
+    object = evaluate(expr.object)
+    if object.is_a?(LoxInstance)
+      return object.get(expr.name)
+    end
+    raise RuntimeError.new(expr.name, "Only instances have properties.")
+  end
+
+  def visitSetExpr(expr)
+    object = evaluate(expr.object)
+    if !object.is_a?(LoxInstance)
+      raise RuntimeError.new(expr.name, "Only instances have fields.")
+    end
+    value = evaluate(expr.value)
+    object.set(expr.name, value)
+    value
+  end
+
+  def visitThis(expr)
+    lookupVariable(expr.keyword, expr)
+  end
   
   def visitLogical(expr)
     left = evaluate(expr.left)
@@ -263,6 +349,20 @@ class Interpreter
   def visitBlockStmt(stmt)
     executeBlock(stmt.statements, Environment.new(@environment))
     nil
+  end
+
+  def visitClassStmt(stmt)
+    @environment.define(stmt.name.lexeme, nil)
+
+    methods = {}
+    stmt.methods.each do |method|
+      function = LoxFunction.new(method, @environment,
+                                 method.name.lexeme == "init")
+      methods[method.name.lexeme] = function
+    end
+    
+    klass = LoxClass.new(stmt.name.lexeme, methods)
+    @environment.assign(stmt.name, klass)
   end
   
   def visitExprStmt(stmt)
