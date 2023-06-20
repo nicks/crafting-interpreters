@@ -71,7 +71,10 @@ def main
                "Variable : Token name",
                "Assign   : Token name, Expr value",
                "Logical  : Expr left, Token operator, Expr right",
-               "Call     : Expr callee, Token paren, Array<Expr> arguments"
+               "Call     : Expr callee, Token paren, Array<Expr> arguments",
+               "Get      : Expr object, Token name",
+               "SetExpr  : Expr object, Token name, Expr value",
+               "This     : Token keyword",
              ])
   define_ast(output_dir, "Stmt", [
                "ExprStmt  : Expr expression",
@@ -81,7 +84,8 @@ def main
                "VarStmt   : Token name, Expr initializer",
                "BlockStmt : Array<Stmt> statements",
                "WhileStmt : Expr condition, Stmt body",
-               "FunctionStmt : Token name, Array<Token> params, Array<Stmt> body"
+               "FunctionStmt : Token name, Array<Token> params, Array<Stmt> body",
+               "ClassStmt : Token name, Array<Stmt> methods",
              ])
   
 end

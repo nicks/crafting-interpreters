@@ -4,6 +4,14 @@ require_relative './Stmt.rb'
 module FunctionType
   NONE = :none
   FUNCTION = :function
+  METHOD = :method
+  INITIALIZER = :initializer
+end
+
+module ClassType
+  NONE = :none
+  CLASS = :class
+  SUBCLASS = :subclass
 end
 
 class Resolver
@@ -14,6 +22,7 @@ class Resolver
     @interpreter = interpreter
     @scopes = []
     @current_function = FunctionType::NONE
+    @current_class = ClassType::NONE
   end
 
   def visitBlockStmt(stmt)
@@ -39,6 +48,29 @@ class Resolver
     declare(stmt.name)
     define(stmt.name)
     resolveFunction(stmt, FunctionType::FUNCTION)
+  end
+
+  def visitClassStmt(stmt)
+    enclosing_class = @current_class
+    @current_class = ClassType::CLASS
+   
+    declare(stmt.name)
+    define(stmt.name)
+
+    beginScope()
+    @scopes.last["this"] = true
+
+    stmt.methods.each do |method|
+      function_type = FunctionType::METHOD
+      if method.name.lexeme == "init"
+        function_type = FunctionType::INITIALIZER
+      end
+      resolveFunction(method, function_type)
+    end
+
+    endScope()
+
+    @current_class = enclosing_class
   end
 
   def resolveFunction(function, type)
@@ -74,7 +106,12 @@ class Resolver
     if @current_function == FunctionType::NONE
       Err.error(stmt.keyword, "Can't return from top-level code.")
     end
-    resolve(stmt.value) if not stmt.value.nil?
+    if not stmt.value.nil?
+      if @current_function == FunctionType::INITIALIZER
+        Err.error(stmt.keyword, "Can't return a value from an initializer.")
+      end
+      resolve(stmt.value)
+    end
   end
 
   def visitWhileStmt(stmt)
@@ -92,6 +129,23 @@ class Resolver
     expr.arguments.each do |arg|
       resolve(arg)
     end
+  end
+
+  def visitGet(expr)
+    resolve(expr.object)
+  end
+
+  def visitSetExpr(expr)
+    resolve(expr.value)
+    resolve(expr.object)
+  end
+
+  def visitThis(expr)
+    if @current_class == ClassType::NONE
+      Err.error(expr.keyword, "Can't use 'this' outside of a class.")
+      return
+    end
+    resolveLocal(expr, expr.keyword)
   end
 
   def visitGrouping(expr)
@@ -125,11 +179,13 @@ class Resolver
       Err.error(name, "Variable with this name already declared in this scope.")
     end
     @scopes.last[name.lexeme] = false
+    nil
   end
 
   def define(name)
     return if @scopes.empty?
     @scopes.last[name.lexeme] = true
+    nil
   end
 
   def resolveStmts(statements)

@@ -40,6 +40,10 @@ module StmtVisitor
     raise NotImplementedError
   end
 
+  def visitClassStmt(stmt)
+    raise NotImplementedError
+  end
+
 end
 
 
@@ -142,6 +146,19 @@ class FunctionStmt < Stmt
 
   def accept(visitor)
     visitor.visitFunctionStmt(self)
+  end
+
+end
+
+class ClassStmt < Stmt
+  attr_reader :name, :methods
+  def initialize(name, methods)
+    @name = name
+    @methods = methods
+  end
+
+  def accept(visitor)
+    visitor.visitClassStmt(self)
   end
 
 end

@@ -40,6 +40,18 @@ module ExprVisitor
     raise NotImplementedError
   end
 
+  def visitGet(expr)
+    raise NotImplementedError
+  end
+
+  def visitSetExpr(expr)
+    raise NotImplementedError
+  end
+
+  def visitThis(expr)
+    raise NotImplementedError
+  end
+
 end
 
 
@@ -143,6 +155,45 @@ class Call < Expr
 
   def accept(visitor)
     visitor.visitCall(self)
+  end
+
+end
+
+class Get < Expr
+  attr_reader :object, :name
+  def initialize(object, name)
+    @object = object
+    @name = name
+  end
+
+  def accept(visitor)
+    visitor.visitGet(self)
+  end
+
+end
+
+class SetExpr < Expr
+  attr_reader :object, :name, :value
+  def initialize(object, name, value)
+    @object = object
+    @name = name
+    @value = value
+  end
+
+  def accept(visitor)
+    visitor.visitSetExpr(self)
+  end
+
+end
+
+class This < Expr
+  attr_reader :keyword
+  def initialize(keyword)
+    @keyword = keyword
+  end
+
+  def accept(visitor)
+    visitor.visitThis(self)
   end
 
 end
