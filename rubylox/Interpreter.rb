@@ -1,4 +1,5 @@
 require_relative './Expr.rb'
+require_relative './Stmt.rb'
 
 class RuntimeError < StandardError
   attr_reader :token, :message
@@ -21,6 +22,8 @@ class Return < StandardError
 end
 
 class Environment
+  attr_reader :values, :enclosing
+  
   def initialize(enclosing=nil)
     @values = {}
     @enclosing = enclosing
@@ -40,6 +43,22 @@ class Environment
     raise RuntimeError.new(name, "Undefined variable '#{name.lexeme}'.")
   end
 
+  def assignAt(distance, name, value)
+    ancestor(distance).values[name.lexeme] = value
+  end
+  
+  def getAt(distance, name)
+    ancestor(distance).values[name]
+  end
+
+  def ancestor(distance)
+    environment = self
+    for i in 0..(distance-1)
+      environment = environment.enclosing
+    end
+    environment
+  end
+  
   def assign(name, value)
     if @values.key?(name.lexeme)
       @values[name.lexeme] = value
@@ -89,7 +108,7 @@ class LoxFunction < LoxCallable
       environment.define(param, arguments[i])
     end
     begin
-      interpreter.executeBlock(@declaration.body.statements, environment)
+      interpreter.executeBlock(@declaration.body, environment)
     rescue Return => returnValue
       return returnValue.value
     end
@@ -116,6 +135,7 @@ class Interpreter
   def initialize(repl_mode=false)
     @globals = Environment.new
     @globals.define_native("clock", $clock)
+    @locals = {}
     
     @environment = @globals
     @repl_mode = repl_mode
@@ -148,8 +168,21 @@ class Interpreter
     object.to_s
   end
 
+  def resolve(expr, depth)
+    @locals[expr] = depth
+  end
+
   def visitVariable(expr)
-    @environment.get(expr.name)
+    lookupVariable(expr.name, expr)
+  end
+
+  def lookupVariable(name, expr)
+    if @locals.key?(expr)
+      distance = @locals[expr]
+      return @environment.getAt(distance, name.lexeme)
+    else
+      return @globals.get(name)
+    end
   end
 
   def visitVarStmt(stmt)
@@ -216,7 +249,14 @@ class Interpreter
 
   def visitAssign(expr)
     value = evaluate(expr.value)
-    @environment.assign(expr.name, value)
+
+    if @locals.key?(expr)
+      distance = @locals[expr]
+      @environment.assignAt(distance, expr.name, value)
+    else
+      @globals.assign(expr.name, value)
+    end
+    
     value
   end
 

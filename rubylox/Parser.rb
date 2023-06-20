@@ -71,7 +71,7 @@ class Parser
     return whileStatement() if match(TokenType::WHILE)
     return returnStatement() if match(TokenType::RETURN)
     return printStatement() if match(TokenType::PRINT)
-    return block() if match(TokenType::LEFT_BRACE)
+    return BlockStmt.new(block()) if match(TokenType::LEFT_BRACE)
     expressionStatement(repl_expression)
   end
 
@@ -140,7 +140,7 @@ class Parser
       statements << declaration()
     end
     consume(TokenType::RIGHT_BRACE, "Expect '}' after block.")
-    BlockStmt.new(statements)
+    statements
   end
 
   def printStatement()
