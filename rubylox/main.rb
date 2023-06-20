@@ -3,6 +3,7 @@
 require_relative "./error.rb"
 require_relative "./Scanner.rb"
 require_relative "./Parser.rb"
+require_relative "./Resolver.rb"
 require_relative "./Interpreter.rb"
 
 # Run from a string.
@@ -22,6 +23,13 @@ def run(source, repl_mode=false)
   end
 
   interpreter = Interpreter.new(repl_mode)
+
+  resolver = Resolver.new(interpreter)
+  resolver.resolveStmts(stmts)
+  if Err.had_error
+    return
+  end
+  
   interpreter.interpret(stmts)
 end
 
