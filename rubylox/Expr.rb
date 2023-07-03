@@ -48,6 +48,10 @@ module ExprVisitor
     raise NotImplementedError
   end
 
+  def visitSuper(expr)
+    raise NotImplementedError
+  end
+
   def visitThis(expr)
     raise NotImplementedError
   end
@@ -182,6 +186,19 @@ class SetExpr < Expr
 
   def accept(visitor)
     visitor.visitSetExpr(self)
+  end
+
+end
+
+class Super < Expr
+  attr_reader :keyword, :method
+  def initialize(keyword, method)
+    @keyword = keyword
+    @method = method
+  end
+
+  def accept(visitor)
+    visitor.visitSuper(self)
   end
 
 end

@@ -74,6 +74,7 @@ def main
                "Call     : Expr callee, Token paren, Array<Expr> arguments",
                "Get      : Expr object, Token name",
                "SetExpr  : Expr object, Token name, Expr value",
+               "Super    : Token keyword, Token method",
                "This     : Token keyword",
              ])
   define_ast(output_dir, "Stmt", [
@@ -85,7 +86,7 @@ def main
                "BlockStmt : Array<Stmt> statements",
                "WhileStmt : Expr condition, Stmt body",
                "FunctionStmt : Token name, Array<Token> params, Array<Stmt> body",
-               "ClassStmt : Token name, Array<Stmt> methods",
+               "ClassStmt : Token name, Variable superclass, Array<Stmt> methods",
              ])
   
 end

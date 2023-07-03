@@ -136,8 +136,9 @@ class LoxFunction < LoxCallable
 end
 
 class LoxClass < LoxCallable
-  def initialize(name, methods)
+  def initialize(name, superclass, methods)
     @name = name
+    @superclass = superclass
     @methods = methods
   end
 
@@ -156,6 +157,7 @@ class LoxClass < LoxCallable
 
   def findMethod(name)
     return @methods[name] if @methods.key?(name)
+    return @superclass.findMethod(name) if @superclass
     nil
   end
 
@@ -319,6 +321,18 @@ class Interpreter
     value
   end
 
+  def visitSuper(expr)
+    distance = @locals[expr]
+    superclass = @environment.getAt(distance, "super")
+    object = @environment.getAt(distance - 1, "this")
+    method = superclass.findMethod(expr.method.lexeme)
+    if method.nil?
+      raise RuntimeError.new(expr.method, "Undefined property '#{expr.method.lexeme}'.")
+    end
+    method.bind(object)
+  end
+    
+
   def visitThis(expr)
     lookupVariable(expr.keyword, expr)
   end
@@ -352,7 +366,21 @@ class Interpreter
   end
 
   def visitClassStmt(stmt)
+    superclass = nil
+    if not stmt.superclass.nil?
+      superclass = evaluate(stmt.superclass)
+      if not superclass.is_a?(LoxClass)
+        raise RuntimeError.new(stmt.superclass.name,
+                               "Superclass must be a class.")
+      end
+    end
+    
     @environment.define(stmt.name.lexeme, nil)
+
+    if not stmt.superclass.nil?
+      @environment = Environment.new(@environment)
+      @environment.define("super", superclass)
+    end
 
     methods = {}
     stmt.methods.each do |method|
@@ -361,7 +389,12 @@ class Interpreter
       methods[method.name.lexeme] = function
     end
     
-    klass = LoxClass.new(stmt.name.lexeme, methods)
+    klass = LoxClass.new(stmt.name.lexeme, superclass, methods)
+
+    if not stmt.superclass.nil?
+      @environment = @environment.enclosing
+    end
+    
     @environment.assign(stmt.name, klass)
   end
   

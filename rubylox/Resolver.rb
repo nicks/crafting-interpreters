@@ -57,6 +57,17 @@ class Resolver
     declare(stmt.name)
     define(stmt.name)
 
+    if not stmt.superclass.nil?
+      if stmt.name.lexeme == stmt.superclass.name.lexeme
+        Err.error(stmt.superclass.name, "A class can't inherit from itself.")
+      end
+
+      @current_class = ClassType::SUBCLASS
+      resolve(stmt.superclass)
+      beginScope()
+      @scopes.last["super"] = true
+    end
+
     beginScope()
     @scopes.last["this"] = true
 
@@ -69,6 +80,10 @@ class Resolver
     end
 
     endScope()
+
+    if not stmt.superclass.nil?
+      endScope()
+    end
 
     @current_class = enclosing_class
   end
@@ -138,6 +153,15 @@ class Resolver
   def visitSetExpr(expr)
     resolve(expr.value)
     resolve(expr.object)
+  end
+
+  def visitSuper(expr)
+    if @current_class == ClassType::NONE
+      Err.error(expr.keyword, "Can't use 'super' outside of a class.")
+    elsif @current_class != ClassType::SUBCLASS
+      Err.error(expr.keyword, "Can't use 'super' in a class with no superclass.")
+    end
+    resolveLocal(expr, expr.keyword)
   end
 
   def visitThis(expr)
