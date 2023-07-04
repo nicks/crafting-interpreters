@@ -8,6 +8,11 @@ use crate::value::write_value_array;
 pub enum OpCode {
     OpConstant = 0,
     OpReturn = 1,
+    OpNegate = 2,
+    OpAdd = 3,
+    OpSubtract = 4,
+    OpMultiply = 5,
+    OpDivide = 6,
 }
 
 impl OpCode {
@@ -19,6 +24,11 @@ impl OpCode {
         match byte {
             0 => Some(OpCode::OpConstant),
             1 => Some(OpCode::OpReturn),
+            2 => Some(OpCode::OpNegate),
+            3 => Some(OpCode::OpAdd),
+            4 => Some(OpCode::OpSubtract),
+            5 => Some(OpCode::OpMultiply),
+            6 => Some(OpCode::OpDivide),
             _ => None,
         }
     }
