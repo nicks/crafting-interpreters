@@ -11,14 +11,13 @@ fn simple_instruction(name: &str, offset: usize) -> usize {
 
 fn constant_instruction(name: &str, chunk: &Chunk, offset: usize) -> usize {
     let constant = chunk.code[offset + 1];
-    let value = chunk.constants.values[constant as usize];
     print!("{:16} {:4} '", name, constant);
-    print_value(value);
+    print_value(chunk.constants.values[constant as usize]);
     print!("'\n");
     offset + 2
 }
 
-fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
+pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     print!("{:04} ", offset);
 
     if offset > 0 && chunk.lines[offset] == chunk.lines[offset - 1] {
@@ -35,6 +34,21 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         Some(OpCode::OpConstant) => {
             return constant_instruction("OP_CONSTANT", chunk, offset)
         }
+        Some(OpCode::OpNegate) => {
+            return simple_instruction("OP_NEGATE", offset)
+        }
+        Some(OpCode::OpAdd) => {
+            return simple_instruction("OP_ADD", offset)
+        }
+        Some(OpCode::OpSubtract) => {
+            return simple_instruction("OP_SUBTRACT", offset)
+        }
+        Some(OpCode::OpMultiply) => {
+            return simple_instruction("OP_MULTIPLY", offset)
+        }
+        Some(OpCode::OpDivide) => {
+            return simple_instruction("OP_DIVIDE", offset)
+        }
         _ => {
             print!("Unknown opcode {}\n", instruction);
             return offset + 1
@@ -42,6 +56,7 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     }
 }
 
+#[allow(dead_code)]
 pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
     print!("== {} ==\n", name);
     let mut i = 0;
