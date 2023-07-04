@@ -5,6 +5,7 @@ use crate::chunk::OpCode;
 use crate::value::Value;
 use crate::value::print_value;
 use crate::debug::disassemble_instruction;
+use crate::compiler::compile;
 
 const DEBUG: bool = false;
 const STACK_MAX: usize = 256;
@@ -24,14 +25,9 @@ pub enum InterpretResult {
     RuntimeError,
 }
 
-pub fn interpret(chunk: &Chunk) -> InterpretResult {
-    let vm = &mut VM{
-        chunk: chunk,
-        ip: 0,
-        stack: [0.0; STACK_MAX],
-        stack_top: 0,
-    };
-    return vm.run();
+pub fn interpret(source: String) -> InterpretResult {
+    compile(source);
+    return InterpretResult::Ok;
 }
 
 impl VM<'_> {
