@@ -4,7 +4,7 @@ pub struct Scanner {
     source: String,
     start: usize,
     current: usize,
-    line: usize,
+    line: i32,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -30,11 +30,29 @@ pub enum TokenType {
     Error, EOF,
 }
 
+impl Default for TokenType {
+    fn default() -> Self { TokenType::EOF }
+}
+
+#[derive(Debug)]
 pub struct Token {
     pub token_type: TokenType,
     pub start: *const u8,
     pub length: usize,
-    pub line: usize,
+    pub line: i32,
+}
+
+static EMPTY_STRING: &str = "";
+
+impl Default for Token {
+    fn default() -> Self {
+        return Token{
+            token_type: TokenType::EOF,
+            start: EMPTY_STRING.as_ptr(),
+            length: 0,
+            line: 0,
+        }
+    }
 }
 
 impl Token {
