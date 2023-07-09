@@ -24,12 +24,14 @@ pub struct Chunk {
     pub lines: Vec<i32>
 }
 
-pub fn write_chunk(chunk: &mut Chunk, code: u8, line: i32) {
-    chunk.code.push(code);
-    chunk.lines.push(line);
-}
-
-pub fn add_constant(chunk: &mut Chunk, value: f64) -> usize {
-    write_value_array(&mut chunk.constants, value);
-    chunk.constants.values.len() - 1
+impl Chunk {
+    pub fn write_chunk(&mut self, code: u8, line: i32) {
+        self.code.push(code);
+        self.lines.push(line);
+    }
+    
+    pub fn add_constant(&mut self, value: f64) -> usize {
+        write_value_array(&mut self.constants, value);
+        self.constants.values.len() - 1
+    }
 }

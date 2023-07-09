@@ -15,7 +15,7 @@ mod scanner;
 fn repl() {
     loop {
         print!("> ");
-        io::stdout().flush();
+        io::stdout().flush().expect("fail: flush");
         
         let mut line = String::new();
         match io::stdin().read_line(&mut line) {

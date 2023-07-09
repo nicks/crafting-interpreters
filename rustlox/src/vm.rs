@@ -26,8 +26,18 @@ pub enum InterpretResult {
 }
 
 pub fn interpret(source: String) -> InterpretResult {
-    compile(source);
-    return InterpretResult::Ok;
+    let mut chunk = Chunk::default();
+    if !compile(source, &mut chunk) {
+        return InterpretResult::CompileError;
+    }
+
+    let mut vm = VM {
+        chunk: &chunk,
+        ip: 0,
+        stack: [0.0; STACK_MAX],
+        stack_top: 0,
+    };
+    return vm.run();
 }
 
 impl VM<'_> {
