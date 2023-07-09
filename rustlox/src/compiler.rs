@@ -12,7 +12,7 @@ pub fn compile(source: String) {
         } else {
             print!("   | ");
         }
-        println!("{:2} '{}'", token.token_type as u8, token.text);
+        println!("{:2} '{}'", token.token_type as u8, token.text());
         if token.token_type == TokenType::EOF || token.token_type == TokenType::Error {
             break;
         }

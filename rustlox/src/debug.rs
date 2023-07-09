@@ -27,26 +27,26 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     }
     
     let instruction = chunk.code[offset];
-    match OpCode::from_u8(instruction) {
-        Some(OpCode::OpReturn) => {
+    match OpCode::try_from(instruction) {
+        Ok(OpCode::Return) => {
             return simple_instruction("OP_RETURN", offset)
         }
-        Some(OpCode::OpConstant) => {
+        Ok(OpCode::Constant) => {
             return constant_instruction("OP_CONSTANT", chunk, offset)
         }
-        Some(OpCode::OpNegate) => {
+        Ok(OpCode::Negate) => {
             return simple_instruction("OP_NEGATE", offset)
         }
-        Some(OpCode::OpAdd) => {
+        Ok(OpCode::Add) => {
             return simple_instruction("OP_ADD", offset)
         }
-        Some(OpCode::OpSubtract) => {
+        Ok(OpCode::Subtract) => {
             return simple_instruction("OP_SUBTRACT", offset)
         }
-        Some(OpCode::OpMultiply) => {
+        Ok(OpCode::Multiply) => {
             return simple_instruction("OP_MULTIPLY", offset)
         }
-        Some(OpCode::OpDivide) => {
+        Ok(OpCode::Divide) => {
             return simple_instruction("OP_DIVIDE", offset)
         }
         _ => {

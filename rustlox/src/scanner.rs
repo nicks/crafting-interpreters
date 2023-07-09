@@ -30,10 +30,20 @@ pub enum TokenType {
     Error, EOF,
 }
 
-pub struct Token<'a> {
+pub struct Token {
     pub token_type: TokenType,
-    pub text: &'a str,
+    pub start: *const u8,
+    pub length: usize,
     pub line: usize,
+}
+
+impl Token {
+    pub fn text(&self) -> &str {
+        unsafe {
+            let slice = std::slice::from_raw_parts(self.start, self.length);
+            return std::str::from_utf8(slice).unwrap();
+        }
+    }
 }
 
 pub fn new_scanner(source: String) -> Scanner {
@@ -45,7 +55,7 @@ pub fn new_scanner(source: String) -> Scanner {
     }
 }
 
-const unexpectedChar: &str = "Unexpected character.";
+const UNEXPECTED_CHAR: &str = "Unexpected character.";
 
 impl Scanner {
     pub fn scan_token(&mut self) -> Token {
@@ -100,7 +110,7 @@ impl Scanner {
                 return self.make_token(TokenType::Greater);
             },
             '"' => self.string(),
-            _ => self.error_token(unexpectedChar),
+            _ => self.error_token(UNEXPECTED_CHAR),
         }
     }
 
@@ -258,17 +268,20 @@ impl Scanner {
     }
 
     fn make_token(&self, token_type: TokenType) -> Token {
+        let slice = &self.source[self.start..self.current];
         return Token{
             token_type: token_type,
-            text: &self.source[self.start..self.current],
+            start: slice.as_ptr(),
+            length: slice.len(),
             line: self.line,
         }
     }
 
-    fn error_token<'a>(&'a self, message: &'a str) -> Token {
+    fn error_token(&self, message: &str) -> Token {
         return Token{
             token_type: TokenType::Error,
-            text: message,
+            start: message.as_ptr(),
+            length: message.len(),
             line: self.line,
         }
     }
