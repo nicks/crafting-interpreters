@@ -175,7 +175,7 @@ impl Scanner {
             'v' => self.check_keyword(1, 2, "ar", TokenType::Var),
             'w' => self.check_keyword(1, 4, "hile", TokenType::While),
             'f' => {
-                if self.current - self.start > 1 {
+                if self.current - self.start <= 1 {
                     return TokenType::Identifier;
                 }
                 return match self.source.as_bytes()[self.start + 1] as char {
@@ -186,7 +186,7 @@ impl Scanner {
                 }
             },
             't' => {
-                if self.current - self.start > 1 {
+                if self.current - self.start <= 1 {
                     return TokenType::Identifier;
                 }
                 return match self.source.as_bytes()[self.start + 1] as char {

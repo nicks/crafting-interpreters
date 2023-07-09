@@ -2,7 +2,6 @@
 
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
-use crate::value::print_value;
 
 fn simple_instruction(name: &str, offset: usize) -> usize {
     print!("{:16}\n", name);
@@ -12,7 +11,7 @@ fn simple_instruction(name: &str, offset: usize) -> usize {
 fn constant_instruction(name: &str, chunk: &Chunk, offset: usize) -> usize {
     let constant = chunk.code[offset + 1];
     print!("{:16} {:4} '", name, constant);
-    print_value(chunk.constants.values[constant as usize]);
+    chunk.constants.values[constant as usize].print();
     print!("'\n");
     offset + 2
 }
@@ -48,6 +47,27 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         }
         Ok(OpCode::Divide) => {
             return simple_instruction("OP_DIVIDE", offset)
+        }
+        Ok(OpCode::Nil) => {
+            return simple_instruction("OP_NIL", offset)
+        }
+        Ok(OpCode::True) => {
+            return simple_instruction("OP_TRUE", offset)
+        }
+        Ok(OpCode::False) => {
+            return simple_instruction("OP_FALSE", offset)
+        }
+        Ok(OpCode::Not) => {
+            return simple_instruction("OP_NOT", offset)
+        }
+        Ok(OpCode::Equal) => {
+            return simple_instruction("OP_EQUAL", offset)
+        }
+        Ok(OpCode::Greater) => {
+            return simple_instruction("OP_GREATER", offset)
+        }
+        Ok(OpCode::Less) => {
+            return simple_instruction("OP_LESS", offset)
         }
         _ => {
             print!("Unknown opcode {}\n", instruction);

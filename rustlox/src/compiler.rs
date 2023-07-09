@@ -2,6 +2,7 @@ use crate::scanner::new_scanner;
 use crate::scanner::Token;
 use crate::scanner::TokenType;
 use crate::scanner::Scanner;
+use crate::value::Value;
 use crate::chunk::Chunk;
 use crate::debug::disassemble_chunk;
 use crate::chunk::OpCode;
@@ -111,7 +112,7 @@ fn rules_table() -> [ParseRule; TOKEN_COUNT] {
     table[TokenType::Else as usize] =
         ParseRule::new(None, None, Precedence::None);
     table[TokenType::False as usize] =
-        ParseRule::new(None, None, Precedence::None);
+        ParseRule::new(Some(literal), None, Precedence::None);
     table[TokenType::For as usize] =
         ParseRule::new(None, None, Precedence::None);
     table[TokenType::Fun as usize] =
@@ -119,7 +120,7 @@ fn rules_table() -> [ParseRule; TOKEN_COUNT] {
     table[TokenType::If as usize] =
         ParseRule::new(None, None, Precedence::None);
     table[TokenType::Nil as usize] =
-        ParseRule::new(None, None, Precedence::None);
+        ParseRule::new(Some(literal), None, Precedence::None);
     table[TokenType::Or as usize] =
         ParseRule::new(None, None, Precedence::None);
     table[TokenType::Print as usize] =
@@ -131,7 +132,7 @@ fn rules_table() -> [ParseRule; TOKEN_COUNT] {
     table[TokenType::This as usize] =
         ParseRule::new(None, None, Precedence::None);
     table[TokenType::True as usize] =
-        ParseRule::new(None, None, Precedence::None);
+        ParseRule::new(Some(literal), None, Precedence::None);
     table[TokenType::Var as usize] =
         ParseRule::new(None, None, Precedence::None);
     table[TokenType::While as usize] =
@@ -241,12 +242,12 @@ impl Parser<'_> {
         self.parse_precedence(Precedence::Assignment);
     }
 
-    fn emit_constant(&mut self, value: f64) {
+    fn emit_constant(&mut self, value: Value) {
         let constant = self.make_constant(value);
         self.emit_bytes(OpCode::Constant as u8, constant);
     }
 
-    fn make_constant(&mut self, value: f64) -> u8 {
+    fn make_constant(&mut self, value: Value) -> u8 {
         let chunk = self.current_chunk();
         let constant = chunk.add_constant(value);
         if constant > usize::MAX {
@@ -288,7 +289,16 @@ fn grouping(parser: &mut Parser) {
 
 fn number(parser: &mut Parser) {
     let value = parser.previous.text().parse::<f64>().unwrap();
-    parser.emit_constant(value);
+    parser.emit_constant(Value::number(value));
+}
+
+fn literal(parser: &mut Parser) {
+    match parser.previous.token_type {
+        TokenType::False => parser.emit_byte(OpCode::False.into()),
+        TokenType::Nil => parser.emit_byte(OpCode::Nil.into()),
+        TokenType::True => parser.emit_byte(OpCode::True.into()),
+        _ => unreachable!(),
+    }
 }
 
 fn unary(parser: &mut Parser) {
@@ -297,6 +307,7 @@ fn unary(parser: &mut Parser) {
     
     match operator_type {
         TokenType::Minus => parser.emit_byte(OpCode::Negate as u8),
+        TokenType::Bang => parser.emit_byte(OpCode::Not as u8),
         _ => unreachable!(),
     }
 }
@@ -310,10 +321,22 @@ fn binary(parser: &mut Parser) {
         Precedence::try_from(p + 1).unwrap());
     
     match operator_type {
-        TokenType::Plus => parser.emit_byte(OpCode::Add as u8),
-        TokenType::Minus => parser.emit_byte(OpCode::Subtract as u8),
-        TokenType::Star => parser.emit_byte(OpCode::Multiply as u8),
-        TokenType::Slash => parser.emit_byte(OpCode::Divide as u8),
+        TokenType::Plus => parser.emit_byte(OpCode::Add.into()),
+        TokenType::Minus => parser.emit_byte(OpCode::Subtract.into()),
+        TokenType::Star => parser.emit_byte(OpCode::Multiply.into()),
+        TokenType::Slash => parser.emit_byte(OpCode::Divide.into()),
+        TokenType::BangEqual => {
+            parser.emit_bytes(OpCode::Equal.into(), OpCode::Not.into());
+        },
+        TokenType::EqualEqual => parser.emit_byte(OpCode::Equal.into()),
+        TokenType::Greater => parser.emit_byte(OpCode::Greater.into()),
+        TokenType::GreaterEqual => {
+            parser.emit_bytes(OpCode::Less.into(), OpCode::Not.into());
+        },
+        TokenType::Less => parser.emit_byte(OpCode::Less.into()),
+        TokenType::LessEqual => {
+            parser.emit_bytes(OpCode::Greater.into(), OpCode::Not.into());
+        },
         _ => unreachable!(),
     }
 }
