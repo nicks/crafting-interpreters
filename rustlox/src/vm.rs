@@ -67,41 +67,41 @@ impl VM<'_> {
             }
             
             let instruction = self.read_byte();
-            match OpCode::from_u8(instruction) {
-                Some(OpCode::OpReturn) => {
+            match OpCode::try_from(instruction) {
+                Ok(OpCode::Return) => {
                     print_value(self.pop());
                     println!();
                     return InterpretResult::Ok;
                 }
-                Some(OpCode::OpConstant) => {
+                Ok(OpCode::Constant) => {
                     let constant = self.read_constant();
                     self.push(constant);
                 }
-                Some(OpCode::OpNegate) => {
+                Ok(OpCode::Negate) => {
                     let val = -self.pop();
                     self.push(val);
                 }
-                Some(OpCode::OpAdd) => {
+                Ok(OpCode::Add) => {
                     let b = self.pop();
                     let a = self.pop();
                     self.push(a + b);
                 }
-                Some(OpCode::OpSubtract) => {
+                Ok(OpCode::Subtract) => {
                     let b = self.pop();
                     let a = self.pop();
                     self.push(a - b);
                 }
-                Some(OpCode::OpMultiply) => {
+                Ok(OpCode::Multiply) => {
                     let b = self.pop();
                     let a = self.pop();
                     self.push(a * b);
                 }
-                Some(OpCode::OpDivide) => {
+                Ok(OpCode::Divide) => {
                     let b = self.pop();
                     let a = self.pop();
                     self.push(a / b);
                 }
-                None => {
+                _ => {
                     println!("Unknown opcode {}", instruction);
                 return InterpretResult::RuntimeError;
                 }

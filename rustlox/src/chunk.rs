@@ -2,36 +2,19 @@
 
 use crate::value::ValueArray;
 use crate::value::write_value_array;
+use num_enum::TryFromPrimitive;
+use num_enum::IntoPrimitive;
 
 #[repr(u8)]
-#[derive(Debug)]
+#[derive(Debug, TryFromPrimitive, IntoPrimitive)]
 pub enum OpCode {
-    OpConstant = 0,
-    OpReturn = 1,
-    OpNegate = 2,
-    OpAdd = 3,
-    OpSubtract = 4,
-    OpMultiply = 5,
-    OpDivide = 6,
-}
-
-impl OpCode {
-    pub fn to_u8(self) -> u8 {
-        self as u8
-    }
-    
-    pub fn from_u8(byte: u8) -> Option<OpCode> {
-        match byte {
-            0 => Some(OpCode::OpConstant),
-            1 => Some(OpCode::OpReturn),
-            2 => Some(OpCode::OpNegate),
-            3 => Some(OpCode::OpAdd),
-            4 => Some(OpCode::OpSubtract),
-            5 => Some(OpCode::OpMultiply),
-            6 => Some(OpCode::OpDivide),
-            _ => None,
-        }
-    }
+    Constant = 0,
+    Return = 1,
+    Negate = 2,
+    Add = 3,
+    Subtract = 4,
+    Multiply = 5,
+    Divide = 6,
 }
     
 #[derive(Debug, Default)]
