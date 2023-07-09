@@ -1,20 +1,27 @@
 // Purpose: In-memory bytecode representation.
 
 use crate::value::ValueArray;
-use crate::value::write_value_array;
+use crate::value::Value;
 use num_enum::TryFromPrimitive;
 use num_enum::IntoPrimitive;
 
 #[repr(u8)]
 #[derive(Debug, TryFromPrimitive, IntoPrimitive)]
 pub enum OpCode {
-    Constant = 0,
-    Return = 1,
-    Negate = 2,
-    Add = 3,
-    Subtract = 4,
-    Multiply = 5,
-    Divide = 6,
+    Constant,
+    Return,
+    Negate,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Nil,
+    True,
+    False,
+    Not,
+    Equal,
+    Greater,
+    Less,
 }
     
 #[derive(Debug, Default)]
@@ -30,8 +37,8 @@ impl Chunk {
         self.lines.push(line);
     }
     
-    pub fn add_constant(&mut self, value: f64) -> usize {
-        write_value_array(&mut self.constants, value);
+    pub fn add_constant(&mut self, value: Value) -> usize {
+        self.constants.write(value);
         self.constants.values.len() - 1
     }
 }

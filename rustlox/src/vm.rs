@@ -3,7 +3,6 @@
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
 use crate::value::Value;
-use crate::value::print_value;
 use crate::debug::disassemble_instruction;
 use crate::compiler::compile;
 
@@ -34,7 +33,7 @@ pub fn interpret(source: String) -> InterpretResult {
     let mut vm = VM {
         chunk: &chunk,
         ip: 0,
-        stack: [0.0; STACK_MAX],
+        stack: [Value::number(0.0); STACK_MAX],
         stack_top: 0,
     };
     return vm.run();
@@ -44,6 +43,10 @@ impl VM<'_> {
     fn push(&mut self, value: Value) {
         self.stack[self.stack_top] = value;
         self.stack_top = self.stack_top + 1;
+    }
+
+    fn peek(&self, distance: usize) -> Value {
+        self.stack[self.stack_top - 1 - distance]
     }
 
     fn pop(&mut self) -> Value {
@@ -57,9 +60,16 @@ impl VM<'_> {
         return byte;
     }
 
-    fn read_constant(&mut self) -> f64 {
+    fn read_constant(&mut self) -> Value {
         let byte = self.read_byte() as usize;
         self.chunk.constants.values[byte]
+    }
+
+    fn runtime_error(&self, message: &str) {
+        eprintln!("{}", message);
+        let instruction = self.ip - 1;
+        let line = self.chunk.lines[instruction];
+        eprintln!("[line {}] in script", line);
     }
 
     fn run(&mut self) -> InterpretResult {
@@ -68,7 +78,7 @@ impl VM<'_> {
                 print!("          ");
                 for i in 0..self.stack_top {
                     print!("[ ");
-                    print_value(self.stack[i]);
+                    self.stack[i].print();
                     print!(" ]");
                 }
                 println!();
@@ -79,7 +89,7 @@ impl VM<'_> {
             let instruction = self.read_byte();
             match OpCode::try_from(instruction) {
                 Ok(OpCode::Return) => {
-                    print_value(self.pop());
+                    self.pop().print();
                     println!();
                     return InterpretResult::Ok;
                 }
@@ -88,28 +98,79 @@ impl VM<'_> {
                     self.push(constant);
                 }
                 Ok(OpCode::Negate) => {
-                    let val = -self.pop();
-                    self.push(val);
+                    let val = self.peek(0);
+                    if !val.is_number() {
+                        self.runtime_error("Operand must be a number.");
+                        return InterpretResult::RuntimeError;
+                    }
+                    let a = self.pop();
+                    self.push(Value::number(-a.as_number()));
                 }
                 Ok(OpCode::Add) => {
+                    if !self.peek(0).is_number() || !self.peek(1).is_number() {
+                        self.runtime_error("Operands must be numbers.");
+                        return InterpretResult::RuntimeError;
+                    }
                     let b = self.pop();
                     let a = self.pop();
-                    self.push(a + b);
+                    self.push(Value::number(a.as_number() + b.as_number()));
                 }
                 Ok(OpCode::Subtract) => {
+                    if !self.peek(0).is_number() || !self.peek(1).is_number() {
+                        self.runtime_error("Operands must be numbers.");
+                        return InterpretResult::RuntimeError;
+                    }
                     let b = self.pop();
                     let a = self.pop();
-                    self.push(a - b);
+                    self.push(Value::number(a.as_number() - b.as_number()));
                 }
                 Ok(OpCode::Multiply) => {
+                    if !self.peek(0).is_number() || !self.peek(1).is_number() {
+                        self.runtime_error("Operands must be numbers.");
+                        return InterpretResult::RuntimeError;
+                    }
                     let b = self.pop();
                     let a = self.pop();
-                    self.push(a * b);
+                    self.push(Value::number(a.as_number() * b.as_number()));
                 }
                 Ok(OpCode::Divide) => {
+                    if !self.peek(0).is_number() || !self.peek(1).is_number() {
+                        self.runtime_error("Operands must be numbers.");
+                        return InterpretResult::RuntimeError;
+                    }
                     let b = self.pop();
                     let a = self.pop();
-                    self.push(a / b);
+                    self.push(Value::number(a.as_number() / b.as_number()));
+                }
+                Ok(OpCode::Nil) => self.push(Value::nil()),
+                Ok(OpCode::True) => self.push(Value::bool(true)),
+                Ok(OpCode::False) => self.push(Value::bool(false)),
+                Ok(OpCode::Equal) => {
+                    let b = self.pop();
+                    let a = self.pop();
+                    self.push(Value::bool(a.equals(b)));
+                }
+                Ok(OpCode::Not) => {
+                    let val = self.pop();
+                    self.push(Value::bool(val.is_falsey()));
+                }
+                Ok(OpCode::Greater) => {
+                    if !self.peek(0).is_number() || !self.peek(1).is_number() {
+                        self.runtime_error("Operands must be numbers.");
+                        return InterpretResult::RuntimeError;
+                    }
+                    let b = self.pop();
+                    let a = self.pop();
+                    self.push(Value::bool(a.as_number() > b.as_number()));
+                }
+                Ok(OpCode::Less) => {
+                    if !self.peek(0).is_number() || !self.peek(1).is_number() {
+                        self.runtime_error("Operands must be numbers.");
+                        return InterpretResult::RuntimeError;
+                    }
+                    let b = self.pop();
+                    let a = self.pop();
+                    self.push(Value::bool(a.as_number() < b.as_number()));
                 }
                 _ => {
                     println!("Unknown opcode {}", instruction);
