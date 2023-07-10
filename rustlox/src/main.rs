@@ -10,6 +10,7 @@ mod debug;
 mod value;
 mod vm;
 mod compiler;
+mod object;
 mod scanner;
 
 fn repl() {

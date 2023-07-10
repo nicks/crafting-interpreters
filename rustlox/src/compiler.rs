@@ -6,6 +6,8 @@ use crate::value::Value;
 use crate::chunk::Chunk;
 use crate::debug::disassemble_chunk;
 use crate::chunk::OpCode;
+use crate::object::Obj;
+use crate::object::ObjArray;
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
 
@@ -14,6 +16,7 @@ const DEBUG: bool = false;
 struct Parser<'a> {
     rules: [ParseRule; TOKEN_COUNT],
     scanner: Scanner,
+    obj_array: &'a mut ObjArray,
     chunk: &'a mut Chunk,
     current: Token,
     previous: Token,
@@ -102,7 +105,7 @@ fn rules_table() -> [ParseRule; TOKEN_COUNT] {
     table[TokenType::Identifier as usize] =
         ParseRule::new(None, None, Precedence::None);
     table[TokenType::String as usize] =
-        ParseRule::new(None, None, Precedence::None);
+        ParseRule::new(Some(string), None, Precedence::None);
     table[TokenType::Number as usize] =
         ParseRule::new(Some(number), None, Precedence::None);
     table[TokenType::And as usize] =
@@ -144,11 +147,12 @@ fn rules_table() -> [ParseRule; TOKEN_COUNT] {
     return table;
 }
 
-pub fn compile(source: String, chunk: &mut Chunk) -> bool {
+pub fn compile(source: String, chunk: &mut Chunk, obj_array: &mut ObjArray) -> bool {
     let mut parser = Parser{
         rules: rules_table(),
         scanner: new_scanner(source),
         chunk: chunk,
+        obj_array: obj_array,
         current: Token::default(),
         previous: Token::default(),
         had_error: false,
@@ -290,6 +294,12 @@ fn grouping(parser: &mut Parser) {
 fn number(parser: &mut Parser) {
     let value = parser.previous.text().parse::<f64>().unwrap();
     parser.emit_constant(Value::number(value));
+}
+
+fn string(parser: &mut Parser) {
+    let text = parser.previous.text();
+    let value = parser.obj_array.copy_string(&text[1..text.len() - 1]);
+    parser.emit_constant(Value::object(value as *const Obj));
 }
 
 fn literal(parser: &mut Parser) {

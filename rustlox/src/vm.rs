@@ -5,6 +5,8 @@ use crate::chunk::OpCode;
 use crate::value::Value;
 use crate::debug::disassemble_instruction;
 use crate::compiler::compile;
+use crate::object::Obj;
+use crate::object::ObjArray;
 
 const DEBUG: bool = false;
 const STACK_MAX: usize = 256;
@@ -15,6 +17,7 @@ pub struct VM<'a> {
     ip: usize,
     stack: [Value; STACK_MAX],
     stack_top: usize,
+    obj_array: &'a mut ObjArray,
 }
 
 #[derive(Debug, PartialEq)]
@@ -25,8 +28,9 @@ pub enum InterpretResult {
 }
 
 pub fn interpret(source: String) -> InterpretResult {
+    let mut obj_array = ObjArray::default();
     let mut chunk = Chunk::default();
-    if !compile(source, &mut chunk) {
+    if !compile(source, &mut chunk, &mut obj_array) {
         return InterpretResult::CompileError;
     }
 
@@ -35,8 +39,11 @@ pub fn interpret(source: String) -> InterpretResult {
         ip: 0,
         stack: [Value::number(0.0); STACK_MAX],
         stack_top: 0,
+        obj_array: &mut obj_array,
     };
-    return vm.run();
+    let result = vm.run();
+    vm.obj_array.free_objects();
+    return result;
 }
 
 impl VM<'_> {
@@ -70,6 +77,19 @@ impl VM<'_> {
         let instruction = self.ip - 1;
         let line = self.chunk.lines[instruction];
         eprintln!("[line {}] in script", line);
+    }
+
+    fn concatenate(&mut self) {
+        let bv = self.pop();
+        let av = self.pop();
+        let b = bv.as_str();
+        let a = av.as_str();
+        
+        let mut result = String::from(a);
+        result.push_str(b);
+
+        let val = self.obj_array.take_string(result.as_str());
+        self.push(Value::object(val as *const Obj));
     }
 
     fn run(&mut self) -> InterpretResult {
@@ -107,13 +127,16 @@ impl VM<'_> {
                     self.push(Value::number(-a.as_number()));
                 }
                 Ok(OpCode::Add) => {
-                    if !self.peek(0).is_number() || !self.peek(1).is_number() {
-                        self.runtime_error("Operands must be numbers.");
+                    if self.peek(0).is_string() && self.peek(1).is_string() {
+                        self.concatenate();
+                    } else if self.peek(0).is_number() && self.peek(1).is_number() {
+                        let b = self.pop();
+                        let a = self.pop();
+                        self.push(Value::number(a.as_number() + b.as_number()));
+                    } else {
+                        self.runtime_error("Operands must be two numbers or two strings.");
                         return InterpretResult::RuntimeError;
                     }
-                    let b = self.pop();
-                    let a = self.pop();
-                    self.push(Value::number(a.as_number() + b.as_number()));
                 }
                 Ok(OpCode::Subtract) => {
                     if !self.peek(0).is_number() || !self.peek(1).is_number() {
