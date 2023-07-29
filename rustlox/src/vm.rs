@@ -84,11 +84,12 @@ impl VM<'_> {
         let av = self.pop();
         let b = bv.as_str();
         let a = av.as_str();
-        
+
+        // TODO(nicks): Could avoid copy here.
         let mut result = String::from(a);
         result.push_str(b);
 
-        let val = self.obj_array.take_string(result.as_str());
+        let val = self.obj_array.copy_string(result.as_str());
         self.push(Value::object(val as *const Obj));
     }
 

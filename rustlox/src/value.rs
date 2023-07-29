@@ -3,6 +3,7 @@
 use std::fmt::Formatter;
 use std::fmt::Result;
 use std::fmt::Debug;
+use std::ptr;
 use crate::object::ObjType;
 use crate::object::Obj;
 use crate::object::ObjString;
@@ -94,11 +95,7 @@ impl Value {
             ValueType::Bool => self.as_bool() == other.as_bool(),
             ValueType::Nil => true,
             ValueType::Number => self.as_number() == other.as_number(),
-            ValueType::Obj => {
-                let a = self.as_str();
-                let b = other.as_str();
-                return a == b;
-            }
+            ValueType::Obj => ptr::eq(self.as_object(), other.as_object()),
         }
     }
     
