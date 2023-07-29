@@ -5,8 +5,6 @@ use std::fmt::Result;
 use std::fmt::Debug;
 use std::alloc::Layout;
 use std::collections::HashMap;
-use std::hash::Hasher;
-use std::hash::Hash;
 use std::str;
 use std::slice;
 
@@ -45,7 +43,7 @@ pub struct ObjString {
 #[derive(Debug)]
 pub struct ObjArray {
     pub objects: *mut Obj,
-    pub strings: HashMap<u32, *const ObjString>,
+    pub strings: HashMap<&'static str, *const ObjString>,
 }
 
 impl ObjArray {
@@ -89,10 +87,9 @@ impl ObjArray {
     }
     
     pub fn copy_string(&mut self, s: &str) -> *const ObjString {
-        let hash = hash_string(s.as_ptr(), s.len());
-        let interned = self.strings.get(&hash);
+        let interned = self.strings.get(s);
         if interned.is_some() {
-            return interned.unwrap().clone();
+            return (*interned.unwrap()) as *const ObjString;
         }
         
         let len = s.len();
@@ -105,10 +102,10 @@ impl ObjArray {
             std::ptr::copy(s.as_ptr(), heap_chars_ptr, len);
             heap_chars_ptr.add(len).write(0);
         }
-        return self.allocate_string(heap_chars_ptr, len, hash);
+        return self.allocate_string(heap_chars_ptr, len);
     }
     
-    fn allocate_string(&mut self, chars: *const u8, len: usize, hash: u32) -> *const ObjString {
+    fn allocate_string(&mut self, chars: *const u8, len: usize) -> *const ObjString {
         let layout = Layout::new::<ObjString>();
         let ptr = unsafe { std::alloc::alloc(layout) } as *mut ObjString;
         if ptr.is_null() {
@@ -122,17 +119,14 @@ impl ObjArray {
             });
         }
         self.write(ptr as *mut Obj);
-        self.strings.insert(hash, ptr as *const ObjString);
-        return ptr as *const ObjString;
+
+        let result = ptr as *const ObjString;
+        unsafe {
+            let slice = std::slice::from_raw_parts(chars, len);
+            let s = std::str::from_utf8(slice).unwrap();
+            self.strings.insert(&s, result);
+        }
+        return ptr;
     }
 
-}
-
-fn hash_string(chars: *const u8, len: usize) -> u32 {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    unsafe {
-        let slice = slice::from_raw_parts(chars, len);
-        slice.hash(&mut hasher);
-    }
-    return hasher.finish() as u32;
 }
