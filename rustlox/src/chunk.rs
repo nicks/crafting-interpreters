@@ -22,6 +22,11 @@ pub enum OpCode {
     Equal,
     Greater,
     Less,
+    Print,
+    Pop,
+    DefineGlobal,
+    GetGlobal,
+    SetGlobal,
 }
     
 #[derive(Debug, Default)]
