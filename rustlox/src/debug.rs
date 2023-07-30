@@ -27,6 +27,21 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     
     let instruction = chunk.code[offset];
     match OpCode::try_from(instruction) {
+        Ok(OpCode::DefineGlobal) => {
+            return constant_instruction("OP_DEFINE_GLOBAL", chunk, offset)
+        }
+        Ok(OpCode::SetGlobal) => {
+            return constant_instruction("OP_SET_GLOBAL", chunk, offset)
+        }
+        Ok(OpCode::GetGlobal) => {
+            return constant_instruction("OP_GET_GLOBAL", chunk, offset)
+        }
+        Ok(OpCode::Pop) => {
+            return simple_instruction("OP_POP", offset)
+        }
+        Ok(OpCode::Print) => {
+            return simple_instruction("OP_PRINT", offset)
+        }
         Ok(OpCode::Return) => {
             return simple_instruction("OP_RETURN", offset)
         }

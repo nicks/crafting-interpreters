@@ -1,5 +1,6 @@
 // Purpose: Lox Virtual Machine
 
+use std::collections::HashMap;
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
 use crate::value::Value;
@@ -18,6 +19,7 @@ pub struct VM<'a> {
     stack: [Value; STACK_MAX],
     stack_top: usize,
     obj_array: &'a mut ObjArray,
+    globals: HashMap<&'static str, Value>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -40,8 +42,10 @@ pub fn interpret(source: String) -> InterpretResult {
         stack: [Value::number(0.0); STACK_MAX],
         stack_top: 0,
         obj_array: &mut obj_array,
+        globals: HashMap::new(),
     };
     let result = vm.run();
+    vm.globals.clear();
     vm.obj_array.free_objects();
     return result;
 }
@@ -109,9 +113,56 @@ impl VM<'_> {
             
             let instruction = self.read_byte();
             match OpCode::try_from(instruction) {
-                Ok(OpCode::Return) => {
-                    self.pop().print();
+                Ok(OpCode::Print) => {
+                    self.peek(0).print();
                     println!();
+                }
+                Ok(OpCode::Pop) => {
+                    self.pop();
+                }
+                Ok(OpCode::DefineGlobal) => {
+                    let constant = self.read_constant();
+                    let value = self.peek(0);
+                    unsafe {
+                        let name = constant.as_string();
+                        let slice = std::slice::from_raw_parts((*name).chars, (*name).len);
+                        let s = std::str::from_utf8(slice).unwrap();
+                        self.globals.insert(s, value);
+                    }
+                    self.pop();
+                }
+                Ok(OpCode::SetGlobal) => {
+                    let constant = self.read_constant();
+                    let value = self.peek(0);
+                    match self.globals.get(constant.as_str()) {
+                        Some(_) => {
+                            unsafe {
+                                let name = constant.as_string();
+                                let slice = std::slice::from_raw_parts((*name).chars, (*name).len);
+                                let s = std::str::from_utf8(slice).unwrap();
+                                self.globals.insert(s, value);
+                            }
+                        }
+                        None => {
+                            self.runtime_error("Undefined variable.");
+                            return InterpretResult::RuntimeError;
+                        }
+                    }
+                }
+                Ok(OpCode::GetGlobal) => {
+                    let constant = self.read_constant();
+                    let value = self.globals.get(constant.as_str());
+                    match value {
+                        Some(v) => {
+                            self.push(*v);
+                        }
+                        None => {
+                            self.runtime_error("Undefined variable.");
+                            return InterpretResult::RuntimeError;
+                        }
+                    }
+                }
+                Ok(OpCode::Return) => {
                     return InterpretResult::Ok;
                 }
                 Ok(OpCode::Constant) => {
