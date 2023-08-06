@@ -22,6 +22,12 @@ fn byte_instruction(name: &str, chunk: &Chunk, offset: usize) -> usize {
     offset + 2
 }
 
+fn jump_instruction(name: &str, sign: i32, chunk: &Chunk, offset: usize) -> usize {
+    let jump = ((chunk.code[offset + 1] as i32) << 8) | chunk.code[offset + 2] as i32;
+    print!("{:16} {:4} -> {}\n", name, offset, (offset as i32) + 3 + (sign * jump));
+    offset + 3
+}
+
 pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     print!("{:04} ", offset);
 
@@ -47,6 +53,15 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         }
         Ok(OpCode::SetLocal) => {
             return byte_instruction("OP_SET_LOCAL", chunk, offset)
+        }
+        Ok(OpCode::JumpIfFalse) => {
+            return jump_instruction("OP_JUMP_IF_FALSE", 1, chunk, offset)
+        }
+        Ok(OpCode::Jump) => {
+            return jump_instruction("OP_JUMP", 1, chunk, offset)
+        }
+        Ok(OpCode::Loop) => {
+            return jump_instruction("OP_LOOP", -1, chunk, offset)
         }
         Ok(OpCode::Pop) => {
             return simple_instruction("OP_POP", offset)
