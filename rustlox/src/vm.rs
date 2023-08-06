@@ -162,6 +162,14 @@ impl VM<'_> {
                         }
                     }
                 }
+                Ok(OpCode::GetLocal) => {
+                    let slot = self.read_byte() as usize;
+                    self.push(self.stack[slot]);
+                }
+                Ok(OpCode::SetLocal) => {
+                    let slot = self.read_byte() as usize;
+                    self.stack[slot] = self.peek(0);
+                }
                 Ok(OpCode::Return) => {
                     return InterpretResult::Ok;
                 }

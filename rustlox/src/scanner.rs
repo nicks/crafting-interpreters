@@ -34,7 +34,7 @@ impl Default for TokenType {
     fn default() -> Self { TokenType::EOF }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub start: *const u8,
