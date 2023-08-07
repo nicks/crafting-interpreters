@@ -39,6 +39,9 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     
     let instruction = chunk.code[offset];
     match OpCode::try_from(instruction) {
+        Ok(OpCode::Call) => {
+            return byte_instruction("OP_CALL", chunk, offset)
+        }
         Ok(OpCode::DefineGlobal) => {
             return constant_instruction("OP_DEFINE_GLOBAL", chunk, offset)
         }
