@@ -6,6 +6,8 @@ use std::fmt::Debug;
 use std::ptr;
 use crate::object::ObjType;
 use crate::object::Obj;
+use crate::object::ObjFunction;
+use crate::object::ObjNative;
 use crate::object::ObjString;
 use crate::object::obj_fmt;
 
@@ -120,6 +122,18 @@ impl Value {
             self.is_object() && (*self.as_object()).t == ObjType::String
         }
     }
+
+    pub fn is_function(&self) -> bool {
+        unsafe {
+            self.is_object() && (*self.as_object()).t == ObjType::Function
+        }
+    }
+
+    pub fn is_native(&self) -> bool {
+        unsafe {
+            self.is_object() && (*self.as_object()).t == ObjType::Native
+        }
+    }
     
     pub fn as_bool(&self) -> bool {
         unsafe {
@@ -145,11 +159,22 @@ impl Value {
         }
     }
 
+    pub fn as_function(&self) -> *const ObjFunction {
+        unsafe {
+            self.as_.obj as *const ObjFunction
+        }
+    }
+
+    pub fn as_native(&self) -> *const ObjNative {
+        unsafe {
+            self.as_.obj as *const ObjNative
+        }
+    }
+
     pub fn as_str(&self) -> &str {
         unsafe {
             let obj_string = self.as_string();
-            let slice = std::slice::from_raw_parts((*obj_string).chars, (*obj_string).len);
-            return std::str::from_utf8(slice).unwrap();
+            return (*obj_string).as_str();
         }
     }
 }
